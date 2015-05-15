@@ -11,21 +11,23 @@ from Queue import Queue
 #cdll.LoadLibrary("./bcm2835.so")
 
 GPIO.setmode(GPIO.BOARD)
-GPIO.setup(40,GPIO.OUT)
-GPIO.setup(38,GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(37,GPIO.OUT)
+GPIO.setup(40,GPIO.OUT) # red led
+GPIO.setup(38,GPIO.IN, pull_up_down=GPIO.PUD_UP) # button
+GPIO.setup(37,GPIO.OUT) # green led
 GPIO.setwarnings(False)
 sensor = CDLL("/home/pi/rpi_sensor_board/sensor.so")
 cam = picamera.PiCamera()
 #cam.resolution = (1024, 768)
+#pi camera config settings
 cam.resolution = (2592,1944)
 cam.exposure_mode = 'antishake'
 cam.awb_mode = 'cloudy'
 tmstmp = time.strftime("%Y%m%d-%H%M%S")
+#keep log of flight
 logging.basicConfig(format='%(asctime)s %(message)s',filename='kite'+str(tmstmp)
 +'.log',level=logging.DEBUG)
   
-
+#class for mpl3115a2 - copied from example code for Xtrinsic board
 class mpl3115a2:
 	def __init__(self):
 		if (0 == sensor.bcm2835_init()):
@@ -103,7 +105,8 @@ class mpl3115a2:
 			val = val - (1<<len)
 
 		return val
-	
+
+#class for mma8491q - copied from example code for Xtrinsic board	
 class MMA8491Q_DATA(Structure):
 	_fields_  = [("Xout", c_int16),
 	("Yout", c_int16),
@@ -156,12 +159,14 @@ class mma8491q:
 
 		return val
 
+# use accelerometer to see when camera is pointing down
 def leveltest(x,y,z):
 	if int(x) > -300 and int(x) < 3000 and int(y) > -300 and int(y) < 300:
 		return (True)
 	else:
 		return (False)		
 
+# wait for the camera to be pointing down
 def waitForLevel():
 	waiting = True
 	while waiting:
@@ -171,6 +176,8 @@ def waitForLevel():
 		time.sleep(0.5)
 		mma.enable()
 	return 
+
+# turn the led red
 def led_red(state):
 	if state == 'on':
 		GPIO.output(37,GPIO.LOW)
@@ -181,6 +188,7 @@ def led_red(state):
 		print 'error'
 	return
 
+# turn the led green
 def led_green(state):
 	if state == 'on':
 		GPIO.output(40,GPIO.LOW)
@@ -190,6 +198,8 @@ def led_green(state):
 	else:
 		print 'error'
 	return
+
+#wait for the button to be pressed
 
 def butwatch(out_q):
 
@@ -205,7 +215,7 @@ def butwatch(out_q):
             time.sleep(0.5)
             state = 'waiting'
 
-
+#initialise sensors
 mma = mma8491q()
 mma.init()
 mma.enable()
